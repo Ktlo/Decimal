@@ -1,6 +1,6 @@
 # Decimal
 
-This class implements decimal number with a big amount of digits (2147483647 digits actually, but this wasn't tested).
+This class implements decimal numbers with a big amount of digits (2147483647 digits actually, but this wasn't tested).
 
 ### What you can do with it?
 
@@ -10,8 +10,9 @@ This class implements decimal number with a big amount of digits (2147483647 dig
 4. Round to any digit
 5. Get a value from int/float/long/double/String
 6. Set value to int/float/long/double/String
-7. ???????
-8. PROFIT!!!
+7. Thread-safety
+8. ???????
+9. PROFIT!!!
 
 ```Java
 new spbstu.ktlo.task1.Decimal().parseDecimal("-.0")
