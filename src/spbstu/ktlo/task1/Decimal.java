@@ -4,18 +4,18 @@ import java.io.ByteArrayOutputStream;
 
 public class Decimal extends Number implements Comparable<Decimal> {
 
-    static private byte[] EMPTY_ARRAY = new byte[0];
+    static private final byte[] EMPTY_ARRAY = new byte[0];
 
-    private byte[] data;
-    private int fractionalDigitsN;
-    private boolean minusSign;
-    private int realLength;
+    private final byte[] data;
+    private final int fractionalDigitsN;
+    private final boolean minusSign;
+    private final int realLength;
 
     private Decimal(byte[] data, int offset, boolean sign) {
         this.data = data;
         fractionalDigitsN = offset;
         minusSign = sign;
-        computeLength();
+        realLength = computeLength();
     }
 
     public Decimal() {
@@ -34,7 +34,7 @@ public class Decimal extends Number implements Comparable<Decimal> {
             data[i] = (byte)(value % 10);
             value /= 10;
         }
-        computeLength();
+        realLength = computeLength();
     }
 
     public Decimal(long value) {
@@ -46,7 +46,7 @@ public class Decimal extends Number implements Comparable<Decimal> {
             data[i] = (byte)(value % 10);
             value /= 10;
         }
-        computeLength();
+        realLength = computeLength();
     }
 
     public Decimal(float value, int fractionalDigitsNumber) {
@@ -63,26 +63,26 @@ public class Decimal extends Number implements Comparable<Decimal> {
         int countFractional = 0;
         byte tmp;
 
-        data = new byte[fractionalDigitsN];
+        byte[] newData = new byte[fractionalDigitsN];
         // Read fractional part
         for (; fractional > 0 && countFractional < fractionalDigitsN; countFractional++) {
             fractional *= 10;
             tmp = (byte)fractional;
             fractional -= tmp;
-            data[countFractional] = tmp;
+            newData[countFractional] = tmp;
         }
 
         // Inverse
         int n = countFractional / 2;
         int i;
         for (i = 0; i < n; i++) {
-            tmp = data[i];
-            data[i] = data[countFractional - i - 1];
-            data[countFractional - i - 1] = tmp;
+            tmp = newData[i];
+            newData[i] = newData[countFractional - i - 1];
+            newData[countFractional - i - 1] = tmp;
         }
 
         // Write fractional part
-        buffer.write(data, 0, countFractional);
+        buffer.write(newData, 0, countFractional);
 
         // Write integer part
         for (; value > 0; countAll++) {
@@ -93,31 +93,33 @@ public class Decimal extends Number implements Comparable<Decimal> {
         }
         buffer.write(0);
 
-        realLength = countFractional + countAll;
-        this.fractionalDigitsN = countFractional;
-        data = buffer.toByteArray();
+        int length = countFractional + countAll;
+        newData = buffer.toByteArray();
 
         // Round
         if (fractional >= .5) {
             i = 0;
-            while (data[i] == 9) {
-                data[i] = 0;
+            while (newData[i] == 9) {
+                newData[i] = 0;
                 i++;
             }
-            data[i]++;
-            if (i == realLength)
-                realLength++;
+            newData[i]++;
+            if (i == length)
+                length++;
             if (i > 0) {
-                if (i > this.fractionalDigitsN)
-                    i = this.fractionalDigitsN;
-                byte[] newData = new byte[realLength - Math.min(i, this.fractionalDigitsN)];
-                System.arraycopy(data, i, newData, 0, newData.length);
-                data = newData;
-                this.fractionalDigitsN -= i;
-                realLength = data.length;
+                if (i > countFractional)
+                    i = countFractional;
+                byte[] veryNewData = new byte[length - Math.min(i, countFractional)];
+                System.arraycopy(newData, i, veryNewData, 0, veryNewData.length);
+                newData = veryNewData;
+                countFractional -= i;
+                length = newData.length;
             }
         }
-        // buffer.close(); -- This has no effect.*/
+        data = newData;
+        this.fractionalDigitsN = countFractional;
+        realLength = length;
+        // buffer.close(); -- This has no effect.
     }
 
     private boolean amIAZero() {
@@ -127,11 +129,12 @@ public class Decimal extends Number implements Comparable<Decimal> {
         return true;
     }
 
-    private void computeLength() {
-        realLength = data.length - 1;
+    private int computeLength() {
+        int realLength = data.length - 1;
         while (realLength >= fractionalDigitsN && data[realLength] == 0)
             realLength--;
         realLength++;
+        return realLength;
     }
 
     private static int allocateAmount(String value) throws NumberFormatException {
@@ -227,17 +230,6 @@ public class Decimal extends Number implements Comparable<Decimal> {
         normalizedIndex--;
         if (data[normalizedIndex] >= 5)
             newData[offset]++;
-        else if (data[normalizedIndex] == 4) {
-            while (normalizedIndex >= 0) {
-                if (data[normalizedIndex] >= 5) {
-                    newData[offset]++;
-                    break;
-                }
-                else if (data[normalizedIndex] < 4)
-                    break;
-                normalizedIndex--;
-            }
-        }
         for (; newData[offset] == 10; offset++) {
             newData[offset + 1]++;
             newData[offset] = 0;
@@ -314,12 +306,13 @@ public class Decimal extends Number implements Comparable<Decimal> {
         return new Decimal(newData, a.fractionalDigitsN, minusSign);
     }
 
-    private Decimal addDifferentSign(Decimal other) {
+    private Decimal addDifferentSign(Decimal other, boolean otherSign) {
         Decimal a, b;
         int tmp = compareWithoutSign(other);
         if (tmp > 0) {
             a = this;
             b = other;
+            otherSign = this.minusSign;
         }
         else if (tmp < 0) {
             a = other;
@@ -405,21 +398,21 @@ public class Decimal extends Number implements Comparable<Decimal> {
             newData = veryNewData;
         }
 
-        return new Decimal(newData, offset, a.minusSign);
+        return new Decimal(newData, offset, otherSign);
     }
 
     public Decimal add(Decimal other) {
         if (other.minusSign == minusSign)
             return addSameSign(other);
         else
-            return addDifferentSign(other);
+            return addDifferentSign(other, other.minusSign);
     }
 
     public Decimal sub(Decimal other) {
-        other.minusSign = !other.minusSign;
-        Decimal result = add(other);
-        other.minusSign = !other.minusSign;
-        return result;
+        if (other.minusSign == minusSign)
+            return addDifferentSign(other, !other.minusSign);
+        else
+            return addSameSign(other);
     }
 
     public Decimal multiply(Decimal other) {

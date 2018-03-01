@@ -102,7 +102,7 @@ class DecimalTest {
 
     @Test
     void round() {
-        assertEquals(Decimal.parseDecimal("4726"),
+        assertEquals(Decimal.parseDecimal("4725"),
                 Decimal.parseDecimal("4725.4825").round());
         assertEquals(Decimal.parseDecimal("4725.48"),
                 Decimal.parseDecimal("4725.4825").round(-2));
@@ -116,8 +116,8 @@ class DecimalTest {
     void constructorFloat() {
         assertEquals(Decimal.parseDecimal("0.125"), new Decimal(0.125f, 5));
         assertEquals(Decimal.parseDecimal("0.13"), new Decimal(0.125, 2));
-        assertEquals(Decimal.parseDecimal("475.13"), new Decimal(475.13, 2));
-        assertEquals(Decimal.parseDecimal("10"), new Decimal(9.96, 1));
+        assertEquals(Decimal.parseDecimal("475.13"), new Decimal(475.13f, 2));
+        assertEquals(Decimal.parseDecimal("-10"), new Decimal(-9.96, 1));
     }
 
     @Test
